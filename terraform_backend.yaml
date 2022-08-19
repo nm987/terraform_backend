@@ -1,0 +1,55 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This is a simple Cloudformation template which initializes remote backend to be used with Terraform
+
+Parameters: 
+  BucketName:
+    Description: Name of the Terraform backend S3 Bucket
+    Type: String
+
+  TableName:
+    Description: DynamoDB table name used for Terraform state file locking
+    Type: String
+    Default: terraform-s3-statefile-lock
+
+Resources: 
+  TerraformBackendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref BucketName
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+        - ServerSideEncryptionByDefault:
+            SSEAlgorithm: aws:kms
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+
+  TerraformDynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      ProvisionedThroughput: 
+        ReadCapacityUnits: "1"
+        WriteCapacityUnits: "1"
+      TableName: !Ref TableName
+      AttributeDefinitions:
+        -
+          AttributeName: LockID
+          AttributeType: S
+      KeySchema:
+        -
+          AttributeName: LockID
+          KeyType: HASH
+
+
+Outputs:
+  TerraformBackendBucketName:
+    Value: !Ref TerraformBackendBucket
+    Description: Terraform backend S3 bucket name
+
+  TerraformBackendDynamoDBTableName:
+    Value: !Ref TerraformDynamoDBTable
+    Description: Terraform backend DynamoDB table name for state locking
